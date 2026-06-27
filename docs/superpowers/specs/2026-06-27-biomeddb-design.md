@@ -90,7 +90,7 @@ Postgres tables (Supabase). Types abbreviated.
 | submitted_by | uuid fk → auth.users | |
 | status | enum `unverified` \| `verified` \| `flagged` | default `unverified` |
 | score | int | denormalized net vote score, trigger-maintained |
-| search_tsv | tsvector | generated from title+description+concept names |
+| search_tsv | tsvector | trigger-maintained from title+description+linked concept names |
 | created_at / updated_at | timestamptz | |
 
 ### `concepts`
