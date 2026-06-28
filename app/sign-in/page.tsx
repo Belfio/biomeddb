@@ -1,13 +1,19 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { Suspense, useState, useTransition } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Container } from '@/components/ui/Container'
 import { Card } from '@/components/ui/Card'
 
-export default function SignIn() {
+function SignInForm() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    searchParams.get('error') === 'auth_failed'
+      ? "That sign-in link didn't work. Request a new one below."
+      : null,
+  )
   const [pending, startTransition] = useTransition()
 
   const sendLink = (e: React.FormEvent<HTMLFormElement>) => {
@@ -17,7 +23,7 @@ export default function SignIn() {
       const sb = createClient()
       const { error } = await sb.auth.signInWithOtp({
         email: email.trim(),
-        options: { emailRedirectTo: `${location.origin}/` },
+        options: { emailRedirectTo: `${location.origin}/auth/callback` },
       })
       if (error) {
         setError(
@@ -30,10 +36,8 @@ export default function SignIn() {
   }
 
   return (
-    <main className="flex flex-1 flex-col">
-      <Container className="flex flex-1 items-center justify-center py-16 sm:py-24">
-        <Card className="w-full max-w-md p-8 sm:p-10">
-          {sent ? (
+    <Card className="w-full max-w-md p-8 sm:p-10">
+      {sent ? (
             <div className="flex flex-col gap-3 text-center">
               <h1 className="text-2xl font-semibold tracking-[-0.02em] text-text">
                 Check your email
@@ -103,8 +107,24 @@ export default function SignIn() {
                 </button>
               </form>
             </div>
-          )}
-        </Card>
+      )}
+    </Card>
+  )
+}
+
+export default function SignIn() {
+  return (
+    <main className="flex flex-1 flex-col">
+      <Container className="flex flex-1 items-center justify-center py-16 sm:py-24">
+        <Suspense
+          fallback={
+            <Card className="w-full max-w-md p-8 sm:p-10">
+              <div className="h-48" aria-hidden />
+            </Card>
+          }
+        >
+          <SignInForm />
+        </Suspense>
       </Container>
     </main>
   )

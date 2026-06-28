@@ -11,7 +11,11 @@ export async function castVoteAction(input: unknown) {
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'Sign in to vote' }
   const { targetType, targetId, value } = parsed.data
-  await castVote(sb, user.id, targetType, targetId, value)
+  try {
+    await castVote(sb, user.id, targetType, targetId, value)
+  } catch {
+    return { error: 'Could not record your vote. Please try again.' }
+  }
   // Refresh the cached detail page. For a dataset target, targetId IS the
   // dataset id. For a dataset_concept target, look up its parent dataset so the
   // detail page's concept score also refreshes.

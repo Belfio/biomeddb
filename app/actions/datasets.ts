@@ -12,7 +12,12 @@ export async function createDatasetAction(input: unknown) {
   const sb = await createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'Sign in to contribute' }
-  const id = await createDataset(sb, parsed.data, user.id)
+  let id: string
+  try {
+    id = await createDataset(sb, parsed.data, user.id)
+  } catch {
+    return { error: 'Could not save the dataset. Please try again.' }
+  }
   revalidatePath('/')
   redirect(`/datasets/${id}`)
 }
