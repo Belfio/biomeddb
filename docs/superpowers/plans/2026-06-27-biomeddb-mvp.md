@@ -25,6 +25,19 @@
   - `concept_kind`: `disease` | `outcome` | `marker`
   - `relationship_type`: `studies` | `outcome` | `marker`
   - `vote_target`: `dataset` | `dataset_concept`
+- **Infrastructure:** hosted Supabase project (ref `sknfacnbkglhstzjzdxu`, region eu-central-1), already linked. Apply migrations with `npx supabase db reset --linked --yes` (NOT local `db reset`/`start`). Deploy on the user's **personal** Vercel + Supabase accounts; deploy Vercel functions in region `fra1` (next to the DB).
+- **Design system (Apple-developer aesthetic: white / grey / blue, futuristic geometric grey lines).** Exact tokens — define as CSS variables in `app/globals.css` and use everywhere; no ad-hoc colors:
+  - `--bg:#fbfbfd` `--surface:#ffffff` `--fill:#f5f5f7` `--hairline:#d2d2d7` `--text:#1d1d1f` `--text-secondary:#6e6e73` `--accent:#0066cc` `--accent-hover:#0077ed`. Signature-only glow: `#0a84ff`→`#5ac8fa` (used ONLY in the hero motif, nowhere else).
+  - Type: body/display = system stack `-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif`; **data/utility face = Geist Mono** (already installed) for counts, modality codes, scores, licenses, IDs. Hero headline large + semibold + tight tracking (`letter-spacing:-0.02em`).
+  - Surfaces: white cards, `1px solid var(--hairline)`, radius `16px`, soft hover shadow only (no heavy shadows); sticky nav with `backdrop-filter: blur(20px)` over translucent white. Generous whitespace; hairline section dividers.
+  - Signature element (build once, use on the home hero): a faint SVG **line-network** motif (nodes + edges in `--hairline`, 2–3 edges lit with the blue glow) evoking datasets linked to disease markers. Subtle, low-opacity, behind the hero search. This is the one bold element — keep everything else quiet.
+  - Quality floor: responsive to mobile, visible keyboard focus rings (accent), `prefers-reduced-motion` respected (disable motif animation/transitions).
+- **Performance (the site must feel instant):**
+  - Server Components by default; only interactive leaves are client components (`SearchBar`, `Filters`, `VoteButtons`, `ConceptAutocomplete`).
+  - **Early loaders:** every async route has a `loading.tsx` with skeletons matching its final layout (`app/loading.tsx` for search, `app/datasets/[id]/loading.tsx` for detail). Use `<Suspense>` for result lists.
+  - **Optimistic UI** for all mutations: votes update the count immediately and reconcile (`useOptimistic`/local state + `useTransition`); the contribute form shows a pending state on submit.
+  - **Caching:** dataset detail pages use ISR (`export const revalidate = 3600`) + tag-based revalidation (`revalidateTag`) on vote/status mutations; `unstable_cache` (or `cache()`) around `getDataset` keyed by id+tag. Search is dynamic but streamed. Rely on Next `<Link>` default prefetch.
+  - Keep client JS minimal; do not pull in heavy UI libs.
 
 ---
 
@@ -1330,14 +1343,24 @@ git add -A && git commit -m "feat: server actions for datasets and votes"
 
 ## Milestone 4 — UI
 
-### Task 13: Search page + components
+### Task 13: Design system foundation + search page
 
 **Files:**
-- Create: `app/page.tsx`, `components/SearchBar.tsx`, `components/Filters.tsx`, `components/DatasetCard.tsx`, `components/ConceptChips.tsx`
+- Create (design foundation FIRST): `app/globals.css` (replace scaffold styles with the design tokens + base styles from Global Constraints), `components/ui/Container.tsx`, `components/ui/Card.tsx`, `components/ui/Badge.tsx`, `components/ui/Skeleton.tsx`, `components/GeometricBackdrop.tsx` (the signature line-network SVG), `app/loading.tsx` (search skeletons)
+- Create (search UI): `app/page.tsx`, `components/SearchBar.tsx`, `components/Filters.tsx`, `components/DatasetCard.tsx`, `components/ConceptChips.tsx`
+- Modify: `app/layout.tsx` (apply bg/text tokens, frosted sticky nav, set font CSS vars; keep Geist Mono available as the data face)
+
+**DESIGN & PERFORMANCE (binding — see Global Constraints for exact tokens):**
+- Implement the Apple-developer aesthetic with the EXACT hex tokens as CSS variables in `globals.css`. White/grey/blue, hairline borders, 16px radii, generous whitespace, frosted sticky nav.
+- Build the **signature** `GeometricBackdrop`: a faint SVG line-network (nodes + edges in `--hairline`, 2–3 edges lit with the `#0a84ff→#5ac8fa` glow), low opacity, behind the home hero. This is the one bold element; keep all else quiet. Respect `prefers-reduced-motion`.
+- Hero: large semibold tight-tracked headline stating the product's job ("Find biomedical datasets by what they measure and the conditions they're linked to"), the `SearchBar` as the focal element, the backdrop behind it.
+- `DatasetCard`: white card, hairline border, hover shadow; render modality code / score / license in **Geist Mono**; verified/unverified as a small `Badge`.
+- `app/loading.tsx`: skeleton list of cards (use `Skeleton`) matching the results layout — instant perceived load.
+- The code blocks below are FUNCTIONAL STARTING POINTS — keep their behavior/data wiring exactly, but restyle their `className`s to the design system (replace `bg-black`/ad-hoc colors with tokenized classes). Use Tailwind with the CSS variables (e.g. `bg-[var(--accent)]`) or `@theme` mappings.
 
 **Interfaces:**
 - Consumes: `parseSearchParams`, `searchDatasets`, `createClient` (server).
-- Produces: server-rendered search page reading `searchParams`; `DatasetCard({ dataset }: { dataset: DatasetRow })`.
+- Produces: server-rendered search page reading `searchParams`; `DatasetCard({ dataset }: { dataset: DatasetRow })`; reusable `Container`, `Card`, `Badge`, `Skeleton`, `GeometricBackdrop`.
 
 - [ ] **Step 1: SearchBar + Filters (client components)**
 
@@ -1497,7 +1520,13 @@ git add -A && git commit -m "feat: search page + result components"
 ### Task 14: Dataset detail page + vote buttons
 
 **Files:**
-- Create: `app/datasets/[id]/page.tsx`, `components/VoteButtons.tsx`
+- Create: `app/datasets/[id]/page.tsx`, `app/datasets/[id]/loading.tsx` (skeleton), `components/VoteButtons.tsx`
+
+**DESIGN & PERFORMANCE (binding):**
+- Style with the design system (tokens, hairline cards, Geist Mono for metadata: modality/license/score/n_subjects). Apply tokenized classes, not ad-hoc colors.
+- Add `app/datasets/[id]/loading.tsx` with a detail skeleton (title bar, metadata row, body lines) matching the final layout.
+- `VoteButtons` must be **optimistic**: update the displayed count immediately via `useOptimistic` (or local state) + `useTransition`, reconcile on the server result, and roll back on error. Disable while pending; visible focus ring.
+- **Caching:** add `export const revalidate = 3600` to the detail page; wrap `getDataset` in `unstable_cache`/`cache()` tagged `dataset:${id}`; the vote and status server actions call `revalidateTag(\`dataset:${id}\`)` so scores refresh without a full dynamic render.
 
 **Interfaces:**
 - Consumes: `getDataset`, `castVoteAction`, `setStatusAction`.
@@ -1600,6 +1629,12 @@ git add -A && git commit -m "feat: dataset detail page + vote buttons"
 
 **Files:**
 - Create: `app/login/page.tsx`, `app/contribute/page.tsx`, `components/ConceptAutocomplete.tsx`, `app/layout.tsx` (modify nav)
+
+**DESIGN & PERFORMANCE (binding):**
+- Style login + contribute form with the design system (tokenized inputs with hairline borders + accent focus rings, white cards, generous spacing). Replace ad-hoc colors (`bg-black`) with `bg-[var(--accent)]` etc.
+- **Optimistic / pending UX:** the contribute form disables the submit button and shows a pending state via `useTransition`/form status while the action runs; on error show the message inline in the interface's voice (e.g. "Add a license that permits redistribution" — not a raw error).
+- The nav uses the frosted sticky treatment from the design system and reflects auth state (show "Sign in" vs the user's email / "Sign out").
+- Keep client JS lean; autocomplete debounces requests.
 
 **Interfaces:**
 - Consumes: `createClient` (browser), `autocompleteConcepts`, `createDatasetAction`.
@@ -1866,17 +1901,18 @@ git add -A && git commit -m "feat: seed importers (PhysioNet + ISIC) and hosted 
 
 **Interfaces:** none (ops task).
 
-- [ ] **Step 1: Create cloud Supabase + push schema**
+- [ ] **Step 1: Cloud Supabase already provisioned**
+The hosted project (`sknfacnbkglhstzjzdxu`, eu-central-1) is already created, linked, migrated, and on the user's PERSONAL account. Just ensure schema is current and seed:
 ```bash
-npx supabase link --project-ref <ref>
-npx supabase db push           # applies migrations to cloud
-# set cloud env vars locally, then:
+npx supabase db reset --linked --yes   # rebuild from migrations (throwaway dev DB)
 npm run seed
 ```
-Create the private `datasets` Storage bucket in the cloud project.
+Create the private `datasets` Storage bucket in the cloud project (Studio → Storage).
 
-- [ ] **Step 2: Deploy to Vercel**
-- Import the repo in Vercel (or `npx vercel`). Set env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only, do not prefix with `NEXT_PUBLIC`).
+- [ ] **Step 2: Deploy to Vercel (personal account, region fra1)**
+- Use the user's **personal** Vercel account/team — confirm the target before deploying.
+- Import the repo (or `npx vercel`). Set `regions` to `["fra1"]` (next to the Frankfurt DB) in project settings / `vercel.json`.
+- Set env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public), and `SUPABASE_SERVICE_ROLE_KEY` (server-only — do NOT prefix with `NEXT_PUBLIC`).
 - In Supabase Auth settings, add the Vercel URL to allowed redirect URLs.
 
 - [ ] **Step 3: Production smoke test (success criteria §10)**

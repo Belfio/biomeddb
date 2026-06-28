@@ -207,7 +207,29 @@ After seeding, both driving searches return real, ranked results.
 6. A redistributable file can be uploaded and downloaded for a `hosted` dataset.
 7. App is deployed and reachable on Vercel with Supabase backing it.
 
-## 11. Phase 2 (post-MVP, not now)
+## 11. Design & Performance (added 2026-06-28, user direction)
+
+**Aesthetic:** Apple-developer feel — white / grey / blue, futuristic with subtle geometric
+grey lines. Tokens (CSS variables): bg `#fbfbfd`, surface `#ffffff`, fill `#f5f5f7`,
+hairline `#d2d2d7`, text `#1d1d1f`, secondary `#6e6e73`, accent `#0066cc`/hover `#0077ed`;
+a blue glow `#0a84ff→#5ac8fa` reserved for the signature only. Type: system stack
+(SF Pro on Apple devices) for prose; Geist Mono as the data/utility face (counts,
+modality codes, scores, licenses). White hairline cards (16px radius), frosted sticky nav,
+generous whitespace.
+
+**Signature element:** a faint SVG line-network behind the home hero (nodes + edges in the
+hairline grey, 2–3 edges lit blue) that visualizes the product's core idea — datasets linked
+to disease/outcome markers. One bold element; everything else stays quiet.
+
+**Performance (must feel instant):** Server Components by default; client only for interactive
+leaves. `loading.tsx` skeletons on every async route (early loaders). Optimistic UI for votes
+and contribute submit. ISR + tag-based `revalidateTag` revalidation on dataset detail; search
+streamed. Default `<Link>` prefetch. Deploy in Vercel region `fra1` next to the Frankfurt DB.
+
+**Accounts:** all hosted infra (Supabase project `sknfacnbkglhstzjzdxu`, Vercel) on the user's
+personal account (a.belfiori@gmail.com).
+
+## 12. Phase 2 (post-MVP, not now)
 
 Automated crawlers, semantic/vector search, reputation-weighted voting, wiki-style
 edit-merge, public API, automated dedup, richer multi-axis quality ratings.
