@@ -13,3 +13,13 @@ export interface DatasetInput {
   nSubjects?: number; format?: string
   concepts: DatasetConceptLink[]
 }
+
+export interface DatasetRow {
+  id: string; title: string; description: string; modality: string
+  source_name: string; source_url: string; host_type: HostType
+  file_path: string | null; license: string; access: AccessLevel
+  n_subjects: number | null; format: string | null
+  status: DatasetStatus; score: number; created_at: string
+}
+export interface LinkedConcept { id: string; conceptId: string; name: string; relationship: RelationshipType; score: number }
+export interface DatasetDetail extends DatasetRow { concepts: LinkedConcept[] }
