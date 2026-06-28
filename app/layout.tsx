@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Geist_Mono } from "next/font/google";
 import { Container } from "@/components/ui/Container";
+import { createClient } from "@/lib/supabase/server";
+import { signOutAction } from "@/app/actions/auth";
 import "./globals.css";
 
 // Geist Mono stays available as the DATA face (modality codes, scores, licenses,
@@ -21,7 +23,13 @@ export const viewport: Viewport = {
   themeColor: "#fbfbfd",
 };
 
-function Nav() {
+async function Nav() {
+  // Server Component: read the current session so the nav reflects auth state.
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+
   return (
     <header className="sticky top-0 z-50 border-b border-hairline bg-surface/70 backdrop-blur-xl backdrop-saturate-150">
       <Container className="flex h-14 items-center justify-between">
@@ -38,19 +46,38 @@ function Nav() {
           >
             Contribute
           </Link>
-          <Link
-            href="/sign-in"
-            className="text-secondary transition-colors hover:text-text"
-          >
-            Sign in
-          </Link>
+          {user ? (
+            <>
+              <span
+                className="hidden max-w-[18ch] truncate font-mono text-xs text-secondary sm:inline"
+                title={user.email ?? undefined}
+              >
+                {user.email}
+              </span>
+              <form action={signOutAction}>
+                <button
+                  type="submit"
+                  className="text-secondary transition-colors hover:text-text"
+                >
+                  Sign out
+                </button>
+              </form>
+            </>
+          ) : (
+            <Link
+              href="/sign-in"
+              className="text-secondary transition-colors hover:text-text"
+            >
+              Sign in
+            </Link>
+          )}
         </nav>
       </Container>
     </header>
   );
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -58,7 +85,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistMono.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-bg text-text antialiased">
-        <Nav />
+        {await Nav()}
         <div className="flex flex-1 flex-col">{children}</div>
       </body>
     </html>
