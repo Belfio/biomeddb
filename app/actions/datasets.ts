@@ -1,6 +1,6 @@
 'use server'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createDataset, setDatasetStatus } from '@/lib/queries/datasets'
 import { datasetInputSchema } from '@/lib/validation'
@@ -22,6 +22,8 @@ export async function setStatusAction(id: string, status: DatasetStatus) {
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'Sign in' }
   await setDatasetStatus(sb, id, status)   // RLS enforces moderator-only for status change
+  revalidateTag(`dataset:${id}`, 'max')    // refresh the cached detail page
   revalidatePath(`/datasets/${id}`)
+  revalidatePath('/')                       // status badge also shows in the list
   return { ok: true as const }
 }

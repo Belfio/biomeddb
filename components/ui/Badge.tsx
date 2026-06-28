@@ -3,9 +3,10 @@ import type { ReactNode } from 'react'
 type BadgeVariant = 'verified' | 'unverified' | 'default'
 
 const VARIANTS: Record<BadgeVariant, string> = {
-  // Subtle green / amber / grey — quiet status pills, never loud.
-  verified: 'bg-green-50 text-green-700 border-green-200',
-  unverified: 'bg-amber-50 text-amber-700 border-amber-200',
+  // Subtle green / amber / grey — quiet status pills, never loud. Colors come
+  // from tokenized status vars (see globals.css @theme), not ad-hoc utilities.
+  verified: 'bg-verified-bg text-verified border-verified/20',
+  unverified: 'bg-warning-bg text-warning border-warning/20',
   default: 'bg-fill text-secondary border-hairline',
 }
 

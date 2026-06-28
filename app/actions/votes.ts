@@ -1,5 +1,5 @@
 'use server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { castVote } from '@/lib/queries/votes'
 import { voteSchema } from '@/lib/validation'
@@ -10,7 +10,21 @@ export async function castVoteAction(input: unknown) {
   const sb = await createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'Sign in to vote' }
-  await castVote(sb, user.id, parsed.data.targetType, parsed.data.targetId, parsed.data.value)
+  const { targetType, targetId, value } = parsed.data
+  await castVote(sb, user.id, targetType, targetId, value)
+  // Refresh the cached detail page. For a dataset target, targetId IS the
+  // dataset id. For a dataset_concept target, look up its parent dataset so the
+  // detail page's concept score also refreshes.
+  if (targetType === 'dataset') {
+    revalidateTag(`dataset:${targetId}`, 'max')
+  } else {
+    const { data: link } = await sb
+      .from('dataset_concepts')
+      .select('dataset_id')
+      .eq('id', targetId)
+      .maybeSingle()
+    if (link?.dataset_id) revalidateTag(`dataset:${link.dataset_id}`, 'max')
+  }
   revalidatePath('/')
   return { ok: true as const }
 }

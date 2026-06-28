@@ -16,6 +16,12 @@
   --color-accent: #0066cc;
   --color-accent-hover: #0077ed;
 
+  /* Status tokens — subtle, Apple-muted green (verified) / amber (warning). */
+  --color-verified: #15803d;
+  --color-verified-bg: #f0fdf4;
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
+
   /* Body = Apple system stack. Geist Mono (loaded in layout) is the DATA face. */
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
     system-ui, sans-serif;

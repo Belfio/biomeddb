@@ -1,5 +1,31 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient as createAnonClient, type SupabaseClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import type { DatasetDetail, DatasetInput, DatasetStatus, LinkedConcept } from '@/lib/types'
+
+/**
+ * Cached PUBLIC read of a dataset, tagged `dataset:${id}` (revalidate hourly,
+ * or on-demand when a vote / status change calls `revalidateTag`).
+ *
+ * GOTCHA: `unstable_cache` callbacks cannot touch request context (`cookies()`),
+ * so we deliberately use a plain, cookieless anon client here instead of the
+ * request server client. Dataset reads are public (RLS allows anon select), so
+ * this returns the same data for every caller — exactly what we want to cache.
+ * The signed-in user / moderator lookup is kept OUT of this cache and done with
+ * the request client in the page.
+ */
+export function getCachedDataset(id: string): Promise<DatasetDetail | null> {
+  return unstable_cache(
+    async () => {
+      const anon = createAnonClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      )
+      return getDataset(anon, id)
+    },
+    ['dataset', id],
+    { tags: [`dataset:${id}`], revalidate: 3600 },
+  )()
+}
 
 export async function getDataset(sb: SupabaseClient, id: string): Promise<DatasetDetail | null> {
   const { data: ds, error: dsErr } = await sb.from('datasets').select('*').eq('id', id).maybeSingle()
